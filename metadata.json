@@ -1,0 +1,6 @@
+{
+  "name": "PT 3Plus Indonesia - Project Management Dashboard",
+  "description": "Dashboard manajemen proyek terpadu PT 3Plus Indonesia untuk pemantauan sebaran proyek di Indonesia, status, linimasa, detail keuangan, dan akses berbasis peran.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
