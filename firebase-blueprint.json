@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "projects": {
+      "title": "Projects",
+      "description": "Portfolio projects managed by PT 3Plus Indonesia",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientContact": { "type": "string" },
+        "location": { "type": "string" },
+        "province": { "type": "string" },
+        "region": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "status": { "type": "string" },
+        "contractValue": { "type": "number" },
+        "startDate": { "type": "string" },
+        "targetEndDate": { "type": "string" },
+        "picId": { "type": "number" },
+        "picName": { "type": "string" },
+        "picEmail": { "type": "string" },
+        "picPhone": { "type": "string" },
+        "progressPercent": { "type": "number" },
+        "description": { "type": "string" },
+        "stages": { "type": "array" },
+        "payments": { "type": "array" }
+      },
+      "required": ["id", "name", "clientName", "status", "contractValue"]
+    },
+    "users": {
+      "title": "Users",
+      "description": "System users and PIC personnel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "title": { "type": "string" },
+        "phone": { "type": "string" },
+        "regionAssigned": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "companySettings": {
+      "title": "Company Settings",
+      "description": "Global company metadata and dashboard announcement banner",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "tagline": { "type": "string" },
+        "headOffice": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "announcementBanner": { "type": "string" },
+        "showAnnouncement": { "type": "boolean" },
+        "currencySymbol": { "type": "string" },
+        "defaultRegionFocus": { "type": "string" }
+      }
+    }
+  }
+}
