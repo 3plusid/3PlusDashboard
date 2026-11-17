@@ -1,8 +1,73 @@
 rules_version = '2';
+
+// PT 3Plus Indonesia - Dashboard Manajemen Proyek
+// Only signed-in team members with a verified email can read data.
+// Access is granted by:
+//   1. OWNER emails below (always Direktur), or
+//   2. a document access/{email} = { role: 'direktur' | 'project_manager' | 'representative_associate' }
+//      that the dashboard writes automatically when a Direktur adds someone in CMS Admin > Tim & PIC.
+// Keep OWNER emails in sync with OWNER_EMAILS in src/lib/firebase.ts.
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function isOwner() {
+      return signedIn() && myEmail() in ['3plus.id@gmail.com', 'info@3plusdesign.com'];
+    }
+
+    function accessPath() {
+      return /databases/$(database)/documents/access/$(myEmail());
+    }
+
+    function isMember() {
+      return isOwner() || (signedIn() && exists(accessPath()));
+    }
+
+    function hasRole(r) {
+      return signedIn() && exists(accessPath()) && get(accessPath()).data.role == r;
+    }
+
+    function isDirektur() {
+      return isOwner() || hasRole('direktur');
+    }
+
+    function canEditProjects() {
+      return isDirektur() || hasRole('project_manager');
+    }
+
+    match /projects/{projectId} {
+      allow read: if isMember();
+      allow write: if canEditProjects();
+    }
+
+    match /users/{userId} {
+      allow read: if isMember();
+      allow write: if isDirektur();
+    }
+
+    match /companySettings/{docId} {
+      allow read: if isMember();
+      allow write: if isDirektur();
+    }
+
+    match /access/{email} {
+      allow read: if isDirektur() || (signedIn() && email == myEmail());
+      allow write: if isDirektur();
+    }
+
+    // Everything else is closed.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

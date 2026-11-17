@@ -6,12 +6,20 @@ import {
   setDoc,
   deleteDoc,
   onSnapshot,
-  getDocs,
-  writeBatch
+  getDoc
 } from 'firebase/firestore';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signOut,
+  User as FirebaseUser
+} from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Project, User, CompanySettings } from '../types';
-import { MOCK_PROJECTS, MOCK_USERS } from '../data/mockData';
+import { Project, User, UserRole, CompanySettings } from '../types';
 
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
@@ -21,47 +29,53 @@ export const db = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestore
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
 
-// Seed initial mock data to Firestore if collection is empty
-export const seedInitialDataIfEmpty = async (
-  defaultSettings: CompanySettings
-) => {
-  try {
-    // Check projects
-    const projectsRef = collection(db, 'projects');
-    const projectsSnap = await getDocs(projectsRef);
-    if (projectsSnap.empty) {
-      console.log('Seeding projects to Firestore...');
-      const batch = writeBatch(db);
-      MOCK_PROJECTS.forEach((proj) => {
-        const docRef = doc(db, 'projects', String(proj.id));
-        batch.set(docRef, proj);
-      });
-      await batch.commit();
-    }
+// ---------------------------------------------------------------------------
+// Authentication & access control
+// ---------------------------------------------------------------------------
+// Owners always have full (direktur) access. Keep this list in sync with
+// OWNER_EMAILS in firestore.rules.
+export const OWNER_EMAILS = ['3plus.id@gmail.com', 'info@3plusdesign.com'];
 
-    // Check users
-    const usersRef = collection(db, 'users');
-    const usersSnap = await getDocs(usersRef);
-    if (usersSnap.empty) {
-      console.log('Seeding users to Firestore...');
-      const batch = writeBatch(db);
-      MOCK_USERS.forEach((u) => {
-        const docRef = doc(db, 'users', String(u.id));
-        batch.set(docRef, u);
-      });
-      await batch.commit();
-    }
+export const auth = getAuth(app);
+auth.languageCode = 'id';
 
-    // Check company settings
-    const settingsDocRef = doc(db, 'companySettings', 'main');
-    const settingsSnap = await getDocs(collection(db, 'companySettings'));
-    if (settingsSnap.empty) {
-      console.log('Seeding company settings to Firestore...');
-      await setDoc(settingsDocRef, defaultSettings);
+export interface AccessInfo {
+  role: UserRole;
+  name?: string;
+}
+
+export const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+export const authApi = {
+  onChange: (cb: (user: FirebaseUser | null) => void) => onAuthStateChanged(auth, cb),
+  signIn: (email: string, password: string) =>
+    signInWithEmailAndPassword(auth, normalizeEmail(email), password),
+  signUp: async (email: string, password: string) => {
+    const cred = await createUserWithEmailAndPassword(auth, normalizeEmail(email), password);
+    await sendEmailVerification(cred.user);
+    return cred;
+  },
+  resetPassword: (email: string) => sendPasswordResetEmail(auth, normalizeEmail(email)),
+  resendVerification: () => (auth.currentUser ? sendEmailVerification(auth.currentUser) : Promise.resolve()),
+  reload: async () => {
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      // Refresh the ID token so Firestore rules see email_verified = true
+      await auth.currentUser.getIdToken(true);
     }
-  } catch (err) {
-    console.error('Error seeding initial Firebase data:', err);
-  }
+    return auth.currentUser;
+  },
+  signOut: () => signOut(auth),
+  /** Returns the access entry for an email, or null if this email has no access. */
+  getAccess: async (email: string): Promise<AccessInfo | null> => {
+    const e = normalizeEmail(email);
+    if (OWNER_EMAILS.includes(e)) return { role: 'direktur' };
+    const snap = await getDoc(doc(db, 'access', e));
+    return snap.exists() ? (snap.data() as AccessInfo) : null;
+  },
+  setAccess: (email: string, info: AccessInfo) =>
+    setDoc(doc(db, 'access', normalizeEmail(email)), info),
+  removeAccess: (email: string) => deleteDoc(doc(db, 'access', normalizeEmail(email)))
 };
 
 // Firestore Sync Listeners

@@ -64,13 +64,13 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         attributionControl: false
       });
 
-      // Using CartoDB Voyager Tile Layer for clean executive map visual
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        maxZoom: 18,
-        subdomains: 'abcd',
+      // OpenStreetMap tiles (free, no API key required)
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
       }).addTo(map);
 
-      // Attribution small
+      // Attribution (required by the OpenStreetMap tile usage policy)
       L.control.attribution({ position: 'bottomright', prefix: '3Plus GIS Platform' }).addTo(map);
 
       mapInstanceRef.current = map;

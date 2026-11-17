@@ -1,42 +1,75 @@
 import React, { useState } from 'react';
-import { User, UserRole } from '../types';
-import { MOCK_USERS } from '../data/mockData';
 import { Logo } from './Logo';
-import { Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle } from 'lucide-react';
+import { Lock, Mail, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { authApi } from '../lib/firebase';
 
-interface LoginScreenProps {
-  onLoginSuccess: (user: User) => void;
-}
+type Mode = 'login' | 'signup' | 'reset';
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState('direktur@3plus.co.id');
-  const [password, setPassword] = useState('3plus123');
+const errorText = (code: string): string => {
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+    case 'auth/invalid-email':
+      return 'Email atau kata sandi salah.';
+    case 'auth/email-already-in-use':
+      return 'Email ini sudah punya akun. Silakan masuk, atau pakai "Lupa kata sandi".';
+    case 'auth/weak-password':
+      return 'Kata sandi minimal 6 karakter.';
+    case 'auth/too-many-requests':
+      return 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.';
+    case 'auth/operation-not-allowed':
+      return 'Login email belum diaktifkan di Firebase (Authentication > Sign-in method > Email/Password).';
+    case 'auth/network-request-failed':
+      return 'Koneksi internet bermasalah. Coba lagi.';
+    default:
+      return 'Terjadi kesalahan (' + code + '). Coba lagi.';
+  }
+};
+
+export const LoginScreen: React.FC = () => {
+  const [mode, setMode] = useState<Mode>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const switchMode = (m: Mode) => {
+    setMode(m);
     setErrorMessage('');
-
-    // Find user by email
-    const foundUser = MOCK_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase());
-
-    if (!foundUser) {
-      setErrorMessage('Email tidak terdaftar dalam sistem PT 3Plus Indonesia.');
-      return;
-    }
-
-    if (!password) {
-      setErrorMessage('Kata sandi tidak boleh kosong.');
-      return;
-    }
-
-    // Success login
-    onLoginSuccess(foundUser);
+    setInfoMessage('');
   };
 
-  const handleQuickLogin = (userRole: UserRole) => {
-    const foundUser = MOCK_USERS.find((u) => u.role === userRole) || MOCK_USERS[0];
-    onLoginSuccess(foundUser);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setInfoMessage('');
+    setBusy(true);
+    try {
+      if (mode === 'login') {
+        await authApi.signIn(email, password);
+      } else if (mode === 'signup') {
+        await authApi.signUp(email, password);
+      } else {
+        await authApi.resetPassword(email);
+        setInfoMessage('Jika email terdaftar, tautan untuk membuat kata sandi baru sudah dikirim. Cek inbox/spam.');
+      }
+    } catch (err: any) {
+      if (mode === 'reset' && err?.code === 'auth/user-not-found') {
+        setInfoMessage('Jika email terdaftar, tautan untuk membuat kata sandi baru sudah dikirim. Cek inbox/spam.');
+      } else {
+        setErrorMessage(errorText(err?.code || 'unknown'));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const titles: Record<Mode, { title: string; button: string }> = {
+    login: { title: 'Masuk ke Dashboard', button: 'Masuk ke Dashboard' },
+    signup: { title: 'Buat Akun Tim', button: 'Buat Akun' },
+    reset: { title: 'Lupa Kata Sandi', button: 'Kirim Tautan Reset' }
   };
 
   return (
@@ -58,6 +91,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           </p>
         </div>
 
+        <h2 className="text-sm font-extrabold text-slate-800 text-center mb-4">{titles[mode].title}</h2>
+
+        {infoMessage && (
+          <div className="mb-6 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span>{infoMessage}</span>
+          </div>
+        )}
+
         {/* Login Error Alert */}
         {errorMessage && (
           <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs font-bold flex items-center gap-2">
@@ -67,9 +109,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleLoginSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email Perusahaan</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email</label>
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -77,12 +119,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@3plus.co.id"
+                placeholder="nama@email.com"
+                autoComplete="email"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-orange-500 focus:bg-white focus:outline-none transition-all"
               />
             </div>
           </div>
 
+          {mode !== 'reset' && (
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Kata Sandi</label>
             <div className="relative">
@@ -93,59 +137,45 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                minLength={6}
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-orange-500 focus:bg-white focus:outline-none transition-all"
               />
             </div>
           </div>
 
+          )}
+
           <button
             type="submit"
-            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-lg shadow-sm shadow-orange-500/30 flex items-center justify-center gap-2 transition-all"
+            disabled={busy}
+            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-lg shadow-sm shadow-orange-500/30 disabled:opacity-60 flex items-center justify-center gap-2 transition-all"
           >
-            Masuk ke Dashboard <ArrowRight className="w-4 h-4" />
+            {busy ? 'Memproses...' : titles[mode].button} <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Presets Quick Login for Demonstration */}
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center mb-3">
-            Pilih Peran untuk Akses Cepat (Demo):
-          </div>
-
-          <div className="space-y-2">
-            <button
-              onClick={() => handleQuickLogin('direktur')}
-              className="w-full p-2.5 bg-slate-50 hover:bg-orange-50 text-slate-700 hover:text-orange-900 rounded-lg border border-slate-200 hover:border-orange-300 text-xs font-bold flex items-center justify-between transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-orange-600" />
-                <span>Masuk sebagai Direktur (BOD)</span>
-              </div>
-              <span className="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-black">FULL ACCESS</span>
+        <div className="mt-5 flex flex-col items-center gap-2 text-xs font-semibold">
+          {mode !== 'login' && (
+            <button type="button" onClick={() => switchMode('login')} className="text-orange-600 hover:underline">
+              Kembali ke halaman masuk
             </button>
-
-            <button
-              onClick={() => handleQuickLogin('project_manager')}
-              className="w-full p-2.5 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-900 rounded-lg border border-slate-200 hover:border-blue-300 text-xs font-bold flex items-center justify-between transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-blue-600" />
-                <span>Masuk sebagai Project Manager</span>
-              </div>
-              <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-black">PROJECT EDIT</span>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('representative_associate')}
-              className="w-full p-2.5 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 rounded-lg border border-slate-200 hover:border-emerald-300 text-xs font-bold flex items-center justify-between transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-emerald-600" />
-                <span>Masuk sebagai Representative Associate</span>
-              </div>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-black">PROSPECT VIEW</span>
-            </button>
-          </div>
+          )}
+          {mode === 'login' && (
+            <>
+              <button type="button" onClick={() => switchMode('reset')} className="text-orange-600 hover:underline">
+                Lupa kata sandi?
+              </button>
+              <button type="button" onClick={() => switchMode('signup')} className="text-slate-500 hover:text-slate-800">
+                Belum punya akun? <span className="text-orange-600 hover:underline">Buat akun</span>
+              </button>
+            </>
+          )}
+          {mode === 'signup' && (
+            <p className="text-[11px] text-slate-500 text-center font-medium">
+              Akun hanya bisa membuka dashboard jika email Anda sudah didaftarkan Direktur di menu Tim &amp; PIC.
+            </p>
+          )}
         </div>
 
         {/* Footer info */}
@@ -153,6 +183,91 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           PT 3PLUS INDONESIA DATA CENTER © {new Date().getFullYear()}
         </div>
 
+      </div>
+    </div>
+  );
+};
+
+/** Shown after sign-in when the email is not verified yet, or has no dashboard access. */
+export const AccessScreen: React.FC<{
+  kind: 'loading' | 'verify' | 'denied';
+  email?: string;
+  onRecheck?: () => Promise<void>;
+  onLogout?: () => void;
+}> = ({ kind, email, onRecheck, onLogout }) => {
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const run = async (fn: () => Promise<unknown>, okMsg?: string) => {
+    setBusy(true);
+    setMsg('');
+    try {
+      await fn();
+      if (okMsg) setMsg(okMsg);
+    } catch (err: any) {
+      setMsg(errorText(err?.code || 'unknown'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200/80 p-8 text-center">
+        <div className="flex justify-center mb-6">
+          <Logo size="lg" lightText={false} />
+        </div>
+
+        {kind === 'loading' && <p className="text-xs font-semibold text-slate-500">Memuat...</p>}
+
+        {kind === 'verify' && (
+          <>
+            <h2 className="text-sm font-extrabold text-slate-800 mb-2">Verifikasi email Anda</h2>
+            <p className="text-xs text-slate-600 mb-5">
+              Kami sudah mengirim tautan verifikasi ke <strong>{email}</strong>. Buka email itu (cek juga folder spam),
+              klik tautannya, lalu tekan tombol di bawah.
+            </p>
+            <button
+              disabled={busy}
+              onClick={() => run(async () => { await onRecheck?.(); }, 'Email belum terverifikasi. Klik tautan di email dulu, lalu coba lagi.')}
+              className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold text-xs rounded-lg mb-2"
+            >
+              Saya sudah verifikasi
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => run(() => authApi.resendVerification(), 'Email verifikasi dikirim ulang.')}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg"
+            >
+              Kirim ulang email verifikasi
+            </button>
+          </>
+        )}
+
+        {kind === 'denied' && (
+          <>
+            <h2 className="text-sm font-extrabold text-slate-800 mb-2">Akun belum punya akses</h2>
+            <p className="text-xs text-slate-600 mb-5">
+              Email <strong>{email}</strong> belum didaftarkan sebagai tim. Minta Direktur menambahkan email ini di
+              CMS Admin &gt; Tim &amp; PIC, lalu tekan "Cek lagi".
+            </p>
+            <button
+              disabled={busy}
+              onClick={() => run(async () => { await onRecheck?.(); }, 'Akses belum ditemukan untuk email ini.')}
+              className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold text-xs rounded-lg"
+            >
+              Cek lagi
+            </button>
+          </>
+        )}
+
+        {msg && <p className="mt-4 text-xs font-bold text-slate-600">{msg}</p>}
+
+        {kind !== 'loading' && (
+          <button onClick={onLogout} className="mt-6 text-xs font-semibold text-slate-500 hover:text-slate-800 underline">
+            Keluar / ganti akun
+          </button>
+        )}
       </div>
     </div>
   );

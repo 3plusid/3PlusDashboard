@@ -1,20 +1,25 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Dashboard Manajemen Proyek — PT 3Plus Indonesia
 
-# Run and deploy your AI Studio app
+Dashboard internal tim 3Plus (peta proyek, daftar proyek + ekspor Excel, linimasa/Gantt, CMS Admin).
+Alamat: **https://dashboard.3plus.id** · Data: Firebase Firestore · Login: Firebase Authentication (email + kata sandi).
 
-This contains everything you need to run your app locally.
+## Siapa yang bisa masuk
+- **Pemilik** (selalu Direktur): `3plus.id@gmail.com`, `info@3plusdesign.com`
+  (ubah di `OWNER_EMAILS` pada `src/lib/firebase.ts` **dan** di `firestore.rules`).
+- **Anggota tim**: Direktur menambahkan email + peran di *CMS Admin > Tim & PIC*. Orang itu lalu
+  klik "Buat akun" di halaman login dengan email yang sama dan memverifikasi emailnya.
+- Peran: Direktur (semua akses + CMS Admin), Project Manager (lihat + ubah proyek),
+  Representative Associate (lihat saja).
 
-View your app in AI Studio: https://ai.studio/apps/f5765abb-77a7-4777-90a5-76871ae0d30b
+## Setup sekali di Firebase Console
+Project: `gen-lang-client-0983401086` (https://console.firebase.google.com)
+1. Authentication > Get started > Sign-in method > **Email/Password** > Enable > Save.
+2. Authentication > Settings > Authorized domains > Add `dashboard.3plus.id`.
+3. Firestore Database > pilih database `ai-studio-pt3plusindonesia-…` > **Rules** >
+   tempel isi `firestore.rules` > Publish.
 
-## Run Locally
+## Deploy (Cloudflare Pages)
+Build command `npm run build`, output `dist`, custom domain `dashboard.3plus.id`.
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Jalankan lokal
+`npm install` lalu `npm run dev` (http://localhost:3000).
