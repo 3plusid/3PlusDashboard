@@ -382,7 +382,7 @@ export const AdminCMS: React.FC<AdminCMSProps> = ({
           }`}
         >
           <Database className="w-4 h-4" />
-          Database & Riset Reset
+          Backup & Data Contoh
         </button>
       </div>
 
@@ -1203,22 +1203,22 @@ export const AdminCMS: React.FC<AdminCMSProps> = ({
                 <RefreshCw className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-extrabold text-red-900 text-sm">Reset ke Data Bawaan Pabrik (Factory Reset)</h4>
+                <h4 className="font-extrabold text-red-900 text-sm">Hapus Data Contoh</h4>
                 <p className="text-xs text-red-700/80 mt-0.5">
-                  Kembalikan seluruh daftar proyek dan akun pengguna ke data sampel awal PT 3Plus Indonesia.
+                  Hapus 12 proyek contoh dan 4 anggota tim contoh bawaan template. Proyek dan anggota tim yang Anda tambahkan sendiri tidak ikut terhapus.
                 </p>
               </div>
             </div>
             <button
               onClick={() => {
-                if (confirm('Apakah Anda benar-benar yakin ingin mengembalikan data ke sampel bawaan awal?')) {
+                if (confirm('Hapus semua proyek dan anggota tim contoh? Data yang Anda tambahkan sendiri tetap aman.')) {
                   onResetData();
-                  showToast('Database berhasil dikembalikan ke data awal!');
+                  showToast('Data contoh berhasil dihapus.');
                 }
               }}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shrink-0 shadow-xs"
             >
-              Reset Database Ke Awal
+              Hapus Data Contoh
             </button>
           </div>
         </div>

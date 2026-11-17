@@ -7,7 +7,6 @@ interface NavbarProps {
   activeTab: 'map' | 'table' | 'timeline' | 'admin';
   onTabChange: (tab: 'map' | 'table' | 'timeline' | 'admin') => void;
   currentUser: User;
-  onRoleSwitch: (role: UserRole) => void;
   onLogout: () => void;
 }
 
@@ -16,10 +15,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onTabChange,
   currentUser,
-  onRoleSwitch,
   onLogout,
 }) => {
-  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
 
   const roleLabels: Record<UserRole, { title: string; badgeColor: string }> = {
     direktur: {
@@ -79,6 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Calendar className="w-4 h-4" />
               Linimasa Proyek
             </button>
+            {currentUser.role === 'direktur' && (
             <button
               onClick={() => onTabChange('admin')}
               className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${
@@ -90,6 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Settings className="w-4 h-4 text-orange-400" />
               CMS Admin
             </button>
+            )}
           </nav>
 
         </div>
@@ -97,75 +96,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right User & Role Switcher */}
         <div className="flex items-center gap-3">
           
-          {/* Active User Role Switcher Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-              className="flex items-center gap-2.5 bg-slate-800/80 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs transition-colors"
-            >
-              <ShieldCheck className="w-4 h-4 text-orange-400" />
-              <div className="text-left hidden sm:block">
-                <div className="font-extrabold text-slate-100">{currentUser.name}</div>
-                <div className="text-[10px] text-slate-400">{roleLabels[currentUser.role].title}</div>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-
-            {/* Role Switcher Menu */}
-            {isRoleDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white text-slate-900 rounded-xl shadow-2xl border border-slate-200 p-2 z-[600] animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-3 py-2 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Ganti Peran Pengguna (Demo Access)
-                </div>
-
-                <div className="space-y-1 my-1">
-                  <button
-                    onClick={() => {
-                      onRoleSwitch('direktur');
-                      setIsRoleDropdownOpen(false);
-                    }}
-                    className={`w-full text-left p-2.5 rounded-lg text-xs font-bold flex items-center justify-between transition-colors ${
-                      currentUser.role === 'direktur' ? 'bg-orange-50 text-orange-900 border border-orange-200' : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-extrabold">Direktur (BOD)</div>
-                      <div className="text-[10px] text-slate-500 font-normal">Akses penuh seluruh portofolio & keuangan</div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      onRoleSwitch('project_manager');
-                      setIsRoleDropdownOpen(false);
-                    }}
-                    className={`w-full text-left p-2.5 rounded-lg text-xs font-bold flex items-center justify-between transition-colors ${
-                      currentUser.role === 'project_manager' ? 'bg-blue-50 text-blue-900 border border-blue-200' : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-extrabold">Project Manager</div>
-                      <div className="text-[10px] text-slate-500 font-normal">Kelola jadwal & progres stage proyek</div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      onRoleSwitch('representative_associate');
-                      setIsRoleDropdownOpen(false);
-                    }}
-                    className={`w-full text-left p-2.5 rounded-lg text-xs font-bold flex items-center justify-between transition-colors ${
-                      currentUser.role === 'representative_associate' ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-extrabold">Representative Associate</div>
-                      <div className="text-[10px] text-slate-500 font-normal">Pantau prospek regional & kontak klien</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
+          {/* Signed-in user */}
+          <div className="flex items-center gap-2.5 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs">
+            <ShieldCheck className="w-4 h-4 text-orange-400" />
+            <div className="text-left hidden sm:block">
+              <div className="font-extrabold text-slate-100">{currentUser.name}</div>
+              <div className="text-[10px] text-slate-400">{roleLabels[currentUser.role]?.title || currentUser.role}</div>
+            </div>
           </div>
 
           {/* Logout Button */}
@@ -206,6 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <Calendar className="w-3.5 h-3.5" /> Linimasa
         </button>
+        {currentUser.role === 'direktur' && (
         <button
           onClick={() => onTabChange('admin')}
           className={`px-3.5 py-1.5 rounded-md flex items-center gap-1 ${
@@ -214,6 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <Settings className="w-3.5 h-3.5" /> Admin
         </button>
+        )}
       </div>
 
     </header>
